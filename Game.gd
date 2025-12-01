@@ -2,9 +2,9 @@ extends Control
 
 var score = 0
 var add = 1
-var addpersec = 1
+var addpersec = 0
 var combo = 0
-
+var costcreep = 1.5
 
 func _on_Timer_timeout():
 	score += addpersec #After the Timer resets, add the add per second to the score.
@@ -22,6 +22,7 @@ var CPSRequirement4 = 12000 #Clicks required to upgrade Clicks Per Second #4
 var CPCRequirement4 = 12000 #Clicks required to upgrade Clicks Per Click #4
 var CPSRequirement5 = 200000 #Clicks required to upgrade Clicks Per Second #5
 var CPCRequirement5 = 200000 #Clicks required to upgrade Clicks Per Click #5
+var string = "Total Wutux slaves production as "
 
 func _on_CPC1_pressed():
 	if score >= CPCRequirement:
@@ -53,8 +54,8 @@ func _on_CPS1_pressed():
 		score -= CPSRequirement
 		CPSRequirement = round(CPSRequirement * 1.4)
 		addpersec = addpersec + 1 #Add CPS.
-		$VBoxContainer/CPS1.text = str("+1 CPS [", CPSRequirement, "]") #Combine multiple strings to show the required clicks.
-		$Label2.text = str("CPS:", addpersec)
+		$VBoxContainer/CPS1.text = str("Wutux slaves 1: +1 CPS [", CPSRequirement, "]") #Combine multiple strings to show the required clicks.
+		$Label2.text = str(string,"CPS:", addpersec)
 
 
 func _on_ClickTimer_timeout():
@@ -69,7 +70,7 @@ func _on_CPS2_pressed():
 		score -= CPSRequirement2
 		CPSRequirement2 = round(CPSRequirement2 * 1.3)
 		addpersec = addpersec + 5 #Add CPS.
-		$VBoxContainer/CPS2.text = str("+5 CPS [", CPSRequirement2, "]") #Combine multiple strings to show the required clicks.
+		$VBoxContainer/CPS2.text = str("Wutux miner slaves: +5 CPS [", CPSRequirement2, "]") #Combine multiple strings to show the required clicks.
 		$Label2.text = str("CPS:", addpersec)
 
 
