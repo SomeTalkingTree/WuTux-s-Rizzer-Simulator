@@ -10,7 +10,7 @@ func _on_Timer_timeout():
 	score += addpersec #After the Timer resets, add the add per second to the score.
 
 func _process(_delta):
-	$Score.text = str(score) #Change the text to the current score every frame.
+	$Score.text = str("Moneys: ",score) #Change the text to the current score every frame.
 
 var CPSRequirement = 20 #Clicks required to upgrade Clicks Per Second
 var CPCRequirement = 20 #Clicks required to upgrade Clicks Per Click
@@ -46,19 +46,7 @@ func _on_Click_pressed():
 	if combo <= 10: # No combo
 		score += add
 
-func Click():
-	$ClickTimer.start()
-	if combo < 25: # Make sure combo doesn't get too high
-		combo += 1
-	if combo >= 25: # Enable the other sparks when combo is over 25
-		$ComboEffect3.emitting = true # More Sparks
-	if combo > 15: # Enable the sparks when combo is over 15
-		$ComboEffect2.emitting = true # Sparks
-	if combo > 10: # Enable the effects when combo is over 10
-		score += round(add * (combo / 10))
-		$ComboEffect.emitting = true
-	if combo <= 10: # No combo
-		score += add
+
 
 func _on_CPS1_pressed():
 	if score >= CPSRequirement:
