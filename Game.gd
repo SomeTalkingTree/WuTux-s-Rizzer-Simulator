@@ -3,7 +3,7 @@ extends Control
 var screen = DisplayServer.window_get_size()
 var screenx= screen.x
 var screeny= screen.y
-var score = 121310
+var score = 121310 #Test score 
 var add = 1
 var addpersec = 0
 var combo = 0
@@ -136,6 +136,7 @@ func _on_CPC1_pressed():
 
 func _on_Click_pressed():
 	$ClickTimer.start()
+	
 	if combo < 25: # Make sure combo doesn't get too high
 		combo += 1
 	if combo >= 25: # Enable the other sparks when combo is over 25
