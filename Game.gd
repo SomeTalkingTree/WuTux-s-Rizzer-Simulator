@@ -1,14 +1,18 @@
 extends Control
 
-var score = 0
+var screen = DisplayServer.window_get_size()
+var screenx= screen.x
+var screeny= screen.y
+var score = 121310
 var add = 1
 var addpersec = 0
 var combo = 0
-var costcreep = 1.5
+var costcreep = 1.5 #increases cost after purchase
 var costcostcreep = 1.3 #Increases costcreep on every purchase
 
 func _on_Timer_timeout():
 	score += addpersec #After the Timer resets, add the add per second to the score.
+	
 	
 
 func _on_Tcostcreep_timeout():
@@ -19,20 +23,29 @@ func _on_Tcostcreep_timeout():
 		costcreep=1.01
 	#Supposed to decrease the costcreep with eggs that comes out at some point basically a war between raising and cutting costs.
 
-func _on_SpecialTimer_timeout():
+func _on_SpecialTimer_timeout(): #THis is AIDS AND NEED WORK ON
 	$Timeout.start()
+	$Label4.text = str("New button now"+score) #THIS IS FOR DEBUGGING
 	var oddoreven =RandomNumberGenerator.new()
 	var oddoreven2 = oddoreven%2
+	var startx = oddoreven.randf_range(0,screenx)
+	var starty = oddoreven.randf_range(0,screeny)
 	if oddoreven2==0:
+		$Node/Specialbutton.position(startx,starty)
+		$Node/Specialbutton.disabled=false
 		$Node/Specialbutton.visible=true 
-	elif oddoreven2==1:
-		$Node/Specialbutton.visible=false
+	else:
+		$Node/Specialbutton2.position(startx,starty)
+		$Node/Specialbutton2.disabled=false
+		$Node/Specialbutton2.visible=true
 		#Supposed to show some buttoms that gives some type of rewards later on. As well as tell the rewards that come with this click of this button
 
 func _on_Timeout_timeout():
 	if $Node/Specialbutton.visible==true:
+		$Node/Specialbutton.disabled=true
 		$Node/Specialbutton.visible=false
 	elif $Node/Specialbutton2.visible==true:
+		$Node/Specialbutton2.disabled=true
 		$Node/Specialbutton2.visible=false
 	#Needs to disable button
 
@@ -40,6 +53,7 @@ func _on_Timeout_timeout():
 
 func _process(_delta):
 	$Score.text = str("Moneys: ",score) #Change the text to the current score every frame.
+	
 
 var CPSRequirement = 20 #Clicks required to upgrade Clicks Per Second
 var CPCRequirement = 20 #Clicks required to upgrade Clicks Per Click
