@@ -9,36 +9,48 @@ var addpersec = 0
 var combo = 0
 var costcreep = 1.5 #increases cost after purchase
 var costcostcreep = 1.3 #Increases costcreep on every purchase
+var seconds = 0
 
 func _on_Timer_timeout():
 	score += addpersec #After the Timer resets, add the add per second to the score.
-	
+	seconds+=1
+	#if(seconds ==3):
+		#seconds =0
+		#$Timeout.start()
+		#$Label4.text = str("New button now: ",score) #THIS IS FOR DEBUGGING
+		#var oddoreven =RandomNumberGenerator.new()
+		#var oddoreven2 = oddoreven.randi_range(0,1)
+		#randomize()
+		#$Node/Specialbutton.disabled=false
+		#$Node/Specialbutton.visible=true 
+		#$Node/Specialbutton2.disabled=false
+		#$Node/Specialbutton2.visible=true
 	
 
-func _on_Tcostcreep_timeout():
-	costcreep = costcreep* .9
-	if costcreep <1:
-		costcreep = costcreep+1
-	elif costcreep==1:
-		costcreep=1.01
-	#Supposed to decrease the costcreep with eggs that comes out at some point basically a war between raising and cutting costs.
+#func _on_Tcostcreep_timeout():
+	#costcreep = costcreep* .9
+	#if costcreep <1:
+		#costcreep = costcreep+1
+	#elif costcreep==1:
+		#costcreep=1.01
+	##Supposed to decrease the costcreep with eggs that comes out at some point basically a war between raising and cutting costs.
 
-func _on_SpecialTimer_timeout(): #THis is AIDS AND NEED WORK ON
-	$Timeout.start()
-	$Label4.text = str("New button now"+score) #THIS IS FOR DEBUGGING
-	var oddoreven =RandomNumberGenerator.new()
-	var oddoreven2 = oddoreven%2
-	var startx = oddoreven.randf_range(0,screenx)
-	var starty = oddoreven.randf_range(0,screeny)
-	if oddoreven2==0:
-		$Node/Specialbutton.position(startx,starty)
-		$Node/Specialbutton.disabled=false
-		$Node/Specialbutton.visible=true 
-	else:
-		$Node/Specialbutton2.position(startx,starty)
-		$Node/Specialbutton2.disabled=false
-		$Node/Specialbutton2.visible=true
-		#Supposed to show some buttoms that gives some type of rewards later on. As well as tell the rewards that come with this click of this button
+#func _on_SpecialTimer_timeout(): #THis is AIDS AND NEED WORK ON
+	#$Timeout.start()
+	#$Label4.text = str("New button now"+score) #THIS IS FOR DEBUGGING
+	#var oddoreven =RandomNumberGenerator.new()
+	#var oddoreven2 = oddoreven%2
+	#var startx = oddoreven.randf_range(0,screenx)
+	#var starty = oddoreven.randf_range(0,screeny)
+	#if oddoreven2==0:
+		#$Node/Specialbutton.position(startx,starty)
+		#$Node/Specialbutton.disabled=false
+		#$Node/Specialbutton.visible=true 
+	#else:
+		#$Node/Specialbutton2.position(startx,starty)
+		#$Node/Specialbutton2.disabled=false
+		#$Node/Specialbutton2.visible=true
+		##Supposed to show some buttoms that gives some type of rewards later on. As well as tell the rewards that come with this click of this button
 
 func _on_Timeout_timeout():
 	if $Node/Specialbutton.visible==true:
@@ -50,8 +62,50 @@ func _on_Timeout_timeout():
 	#Needs to disable button
 
 
+func hsv_to_rgb(h, s, v, a = 1):
+	#based on code at
+	#http://stackoverflow.com/questions/51203917/math-behind-hsv-to-rgb-conversion-of-colors
+	var r
+	var g
+	var b
+	var i = floor(h * 6)
+	var f = h * 6 - i
+	var p = v * (1 - s)
+	var q = v * (1 - f * s)
+	var t = v * (1 - (1 - f) * s)
+	match (int(i) % 6):
+		0:
+			r = v
+			g = t
+			b = p
+		1:
+			r = v
+			g = t
+			b = p
+		2:
+			r = v
+			g = t
+			b = p
+		3:
+			r = v
+			g = t
+			b = p
+		4:
+			r = v
+			g = t
+			b = p
+		5:
+			r = v
+			g = t
+			b = p
+	return Color(r, g, b, a)
+	
+func ready():
+	var random_color = Color(randf(), randf(), randf(), 1.0)
+	$Score.modulate = random_color  # Apply to text label   
 
 func _process(_delta):
+	ready()
 	$Score.text = str("Moneys: ",score) #Change the text to the current score every frame.
 	
 
