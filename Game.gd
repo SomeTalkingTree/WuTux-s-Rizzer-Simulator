@@ -14,6 +14,8 @@ var seconds = 0
 func _on_Timer_timeout():
 	score += addpersec #After the Timer resets, add the add per second to the score.
 	seconds+=1
+	ready()
+	
 	#if(seconds ==3):
 		#seconds =0
 		#$Timeout.start()
@@ -62,50 +64,50 @@ func _on_Timeout_timeout():
 	#Needs to disable button
 
 
-func hsv_to_rgb(h, s, v, a = 1):
-	#based on code at
-	#http://stackoverflow.com/questions/51203917/math-behind-hsv-to-rgb-conversion-of-colors
-	var r
-	var g
-	var b
-	var i = floor(h * 6)
-	var f = h * 6 - i
-	var p = v * (1 - s)
-	var q = v * (1 - f * s)
-	var t = v * (1 - (1 - f) * s)
-	match (int(i) % 6):
-		0:
-			r = v
-			g = t
-			b = p
-		1:
-			r = v
-			g = t
-			b = p
-		2:
-			r = v
-			g = t
-			b = p
-		3:
-			r = v
-			g = t
-			b = p
-		4:
-			r = v
-			g = t
-			b = p
-		5:
-			r = v
-			g = t
-			b = p
-	return Color(r, g, b, a)
+#func hsv_to_rgb(h, s, v, a = 1):
+	##based on code at
+	##http://stackoverflow.com/questions/51203917/math-behind-hsv-to-rgb-conversion-of-colors
+	#var r
+	#var g
+	#var b
+	#var i = floor(h * 6)
+	#var f = h * 6 - i
+	#var p = v * (1 - s)
+	#var q = v * (1 - f * s)
+	#var t = v * (1 - (1 - f) * s)
+	#match (int(i) % 6):
+		#0:
+			#r = v
+			#g = t
+			#b = p
+		#1:
+			#r = v
+			#g = t
+			#b = p
+		#2:
+			#r = v
+			#g = t
+			#b = p
+		#3:
+			#r = v
+			#g = t
+			#b = p
+		#4:
+			#r = v
+			#g = t
+			#b = p
+		#5:
+			#r = v
+			#g = t
+			#b = p
+	#return Color(r, g, b, a)
 	
 func ready():
 	var random_color = Color(randf(), randf(), randf(), 1.0)
 	$Score.modulate = random_color  # Apply to text label   
 
 func _process(_delta):
-	ready()
+	
 	$Score.text = str("Moneys: ",score) #Change the text to the current score every frame.
 	
 
