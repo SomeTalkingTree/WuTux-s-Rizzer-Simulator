@@ -40,9 +40,10 @@ var auto_save_counter: int = 0
 # Menu Variables
 var pause_menu_node: Control
 var save_load_window: Control 
+var reset_confirm_window: Control # NEW: The confirmation popup
 var load_autosave_btn: Button 
-var synergy_container: VBoxContainer # Where we put upgrade buttons
-var prestige_label: Label # To show current permanent bonus
+var synergy_container: VBoxContainer 
+var prestige_label: Label 
 
 # --- NODES & SIGNALS ---
 func _ready():
@@ -74,9 +75,6 @@ func _ready():
 func _process(_delta):
 	if not get_tree().paused:
 		$Score.text = "Moneys: %s" % score
-		$ColorRect.size = ($Score.size)
-		
-		
 		# Check continuously if we can show upgrades or prestige
 		check_synergy_unlocks()
 		check_prestige_unlock()
@@ -156,7 +154,6 @@ func recalculate_stats():
 	var base_cpc = 1 + cpc1_prod + cpc2_prod + cpc3_prod + cpc4_prod + cpc5_prod
 
 	# 3. APPLY PRESTIGE MULTIPLIER
-	# Example: 10 diamonds = 1.0 + (10 * 0.1) = 2.0x multiplier (Double)
 	var multiplier = 1.0 + (prestige_currency * prestige_multiplier_per_point)
 	
 	cps = round(base_cps * multiplier)
@@ -172,7 +169,7 @@ func recalculate_stats():
 func create_prestige_ui():
 	# Create a label for displaying diamonds on the main screen
 	prestige_label = Label.new()
-	prestige_label.position = Vector2(12, 94)
+	prestige_label.position = Vector2(20, 20)
 	prestige_label.modulate = Color(0.6, 0.8, 1.0) # Light blue
 	prestige_label.text = "Diamonds: 0\nBonus: +0%"
 	add_child(prestige_label)
@@ -181,8 +178,6 @@ func check_prestige_unlock():
 	var btn_name = "Prestige_Button"
 	var existing_btn = $VBoxContainer.get_node_or_null(btn_name)
 	
-	# Only show if score is high enough to gain at least 1 diamond
-	# Let's say 1 Diamond per 100,000 score
 	var potential_gain = floor(score / 100000.0)
 	
 	if score >= PRESTIGE_THRESHOLD and potential_gain > 0:
@@ -196,7 +191,6 @@ func check_prestige_unlock():
 			$VBoxContainer.add_child(btn)
 			$VBoxContainer.move_child(btn, 0)
 		else:
-			# Update the text dynamically as score goes up
 			existing_btn.text = "ASCEND\nReset to gain +%s Diamonds" % potential_gain
 	else:
 		if existing_btn:
@@ -210,19 +204,14 @@ func perform_prestige_reset(gain: int):
 	score = 0
 	combo = 0
 	
-	# Reset buildings
-	for k in building_counts.keys():
-		building_counts[k] = 0
+	for k in building_counts.keys(): building_counts[k] = 0
+	for k in synergies.keys(): synergies[k] = false
 	
-	# Reset synergies
-	for k in synergies.keys():
-		synergies[k] = false
-	
-	# Reset costs to defaults
+	# Reset costs
 	cost_cpc1 = 20; cost_cpc2 = 150; cost_cpc3 = 1400; cost_cpc4 = 12000; cost_cpc5 = 200000
 	cost_cps1 = 20; cost_cps2 = 150; cost_cps3 = 1400; cost_cps4 = 12000; cost_cps5 = 200000
 	
-	# Remove any upgrade buttons that might be lingering
+	# Remove buttons
 	for child in $VBoxContainer.get_children():
 		if child.name.begins_with("Synergy_") or child.name == "Prestige_Button":
 			child.queue_free()
@@ -233,17 +222,14 @@ func perform_prestige_reset(gain: int):
 	save_game(current_save_file_name if current_save_file_name != "" else AUTOSAVE_FILE)
 	
 	spawn_floating_text("ASCENDED!", screen_size / 2, Color.CYAN)
-	spawn_floating_text("+%s Diamonds" % gain, (screen_size / 2) + Vector2(0, 126), Color.CYAN)
+	spawn_floating_text("+%s Diamonds" % gain, (screen_size / 2) + Vector2(0, 40), Color.CYAN)
 
 # --- SYNERGY SYSTEM ---
 
 func check_synergy_unlocks():
-	# If we haven't bought Manager Training yet
 	if not synergies["manager_training"]:
 		var btn_name = "Synergy_ManagerTraining"
 		var existing_btn = $VBoxContainer.get_node_or_null(btn_name)
-		
-		# Condition to show button: Score > 500 OR we already have some slaves
 		if score >= 500 or building_counts["cps1"] > 0:
 			if not existing_btn:
 				create_synergy_button(btn_name, "Manager Training [1000]", 1000, "Doubles output of Wutux Slaves", func():
@@ -263,7 +249,7 @@ func create_synergy_button(name_id: String, text: String, cost: int, tooltip: St
 		if score >= cost:
 			score -= cost
 			callback.call()
-			btn.queue_free() # Remove button after buying
+			btn.queue_free()
 			spawn_floating_text("UPGRADE BOUGHT!", $Score.global_position, Color.MAGENTA)
 			if current_save_file_name != "": save_game(current_save_file_name)
 	)
@@ -298,7 +284,7 @@ func save_game(filename: String, is_manual_save: bool = true):
 		"score": score,
 		"counts": building_counts, 
 		"synergies": synergies, 
-		"prestige": prestige_currency, # Save Diamonds
+		"prestige": prestige_currency, 
 		"timestamp": time_str,
 		"costs": {
 			"cpc1": cost_cpc1, "cpc2": cost_cpc2, "cpc3": cost_cpc3, "cpc4": cost_cpc4, "cpc5": cost_cpc5,
@@ -324,14 +310,12 @@ func load_game(filename: String):
 	
 	if data:
 		score = int(data.get("score", score))
-		prestige_currency = int(data.get("prestige", 0)) # Load Diamonds
+		prestige_currency = int(data.get("prestige", 0))
 		
-		# Load Synergies
 		var loaded_synergies = data.get("synergies", {})
 		if loaded_synergies.has("manager_training"):
 			synergies["manager_training"] = loaded_synergies["manager_training"]
 			
-		# Load Costs
 		var costs = data.get("costs", {})
 		cost_cpc1 = int(costs.get("cpc1", cost_cpc1))
 		cost_cpc2 = int(costs.get("cpc2", cost_cpc2))
@@ -345,7 +329,6 @@ func load_game(filename: String):
 		cost_cps4 = int(costs.get("cps4", cost_cps4))
 		cost_cps5 = int(costs.get("cps5", cost_cps5))
 		
-		# --- MIGRATION LOGIC ---
 		if data.has("counts"):
 			var c = data["counts"]
 			for k in building_counts.keys():
@@ -364,7 +347,7 @@ func load_game(filename: String):
 			building_counts["cps4"] = get_count_from_cost(cost_cps4, 12000)
 			building_counts["cps5"] = get_count_from_cost(cost_cps5, 200000)
 		
-		recalculate_stats() # Update CPS/CPC based on loaded/calculated counts
+		recalculate_stats()
 		
 		if filename == AUTOSAVE_FILE and data.has("original_filename"):
 			current_save_file_name = data["original_filename"]
@@ -442,13 +425,102 @@ func setup_pause_menu():
 	create_menu_button("Save Game", vbox, func(): open_save_load_menu(true))
 	create_menu_button("Load Game", vbox, func(): open_save_load_menu(false))
 	create_menu_button("Quit", vbox, func(): get_tree().quit())
+	
+	# NEW: Hard Reset Button (Red)
+	var reset_btn = create_menu_button("HARD RESET", vbox, func(): reset_confirm_window.visible = true)
+	reset_btn.modulate = Color(1, 0.3, 0.3)
 
+	# Save/Load Window
 	save_load_window = Panel.new()
 	save_load_window.name = "SaveLoadWindow"
 	save_load_window.visible = false
 	save_load_window.custom_minimum_size = Vector2(400, 500)
 	save_load_window.set_anchors_preset(Control.PRESET_CENTER)
 	pause_menu_node.add_child(save_load_window)
+	
+	# Reset Confirmation Window
+	create_reset_confirm_ui()
+
+func create_reset_confirm_ui():
+	reset_confirm_window = Panel.new()
+	reset_confirm_window.visible = false
+	reset_confirm_window.custom_minimum_size = Vector2(300, 200)
+	reset_confirm_window.set_anchors_preset(Control.PRESET_CENTER)
+	pause_menu_node.add_child(reset_confirm_window)
+	
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var margin = MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_child(vbox)
+	reset_confirm_window.add_child(margin)
+	
+	var lbl = Label.new()
+	lbl.text = "Are you sure?\nThis will WIPE your\nsave and progress."
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(lbl)
+	
+	# Spacer
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 20)
+	vbox.add_child(spacer)
+	
+	var btn_wipe = Button.new()
+	btn_wipe.text = "WIPE EVERYTHING"
+	btn_wipe.modulate = Color(1, 0, 0)
+	btn_wipe.custom_minimum_size = Vector2(200, 40)
+	btn_wipe.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn_wipe.pressed.connect(perform_hard_reset)
+	vbox.add_child(btn_wipe)
+	
+	var btn_cancel = Button.new()
+	btn_cancel.text = "Cancel"
+	btn_cancel.custom_minimum_size = Vector2(200, 40)
+	btn_cancel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn_cancel.pressed.connect(func(): reset_confirm_window.visible = false)
+	vbox.add_child(btn_cancel)
+
+func perform_hard_reset():
+	# 1. Reset Internal State
+	score = 0
+	combo = 0
+	prestige_currency = 0
+	cpc = 1
+	cps = 0
+	
+	for k in building_counts.keys(): building_counts[k] = 0
+	for k in synergies.keys(): synergies[k] = false
+	
+	# Reset costs
+	cost_cpc1 = 20; cost_cpc2 = 150; cost_cpc3 = 1400; cost_cpc4 = 12000; cost_cpc5 = 200000
+	cost_cps1 = 20; cost_cps2 = 150; cost_cps3 = 1400; cost_cps4 = 12000; cost_cps5 = 200000
+	
+	# 2. Delete Files
+	var dir = DirAccess.open("user://")
+	if current_save_file_name != "" and dir.file_exists(current_save_file_name):
+		dir.remove(current_save_file_name)
+		
+	if dir.file_exists(AUTOSAVE_FILE):
+		dir.remove(AUTOSAVE_FILE)
+	
+	current_save_file_name = ""
+	
+	# 3. UI Updates
+	# Clear upgrades from UI
+	for child in $VBoxContainer.get_children():
+		if child.name.begins_with("Synergy_") or child.name == "Prestige_Button":
+			child.queue_free()
+			
+	recalculate_stats()
+	update_ui_text()
+	
+	# Close menus
+	reset_confirm_window.visible = false
+	toggle_pause_menu() # Unpauses game
+	
+	spawn_floating_text("GAME WIPED", screen_size / 2, Color.RED)
+
 
 func open_save_load_menu(is_save_mode: bool):
 	save_load_window.visible = true
@@ -539,6 +611,7 @@ func toggle_pause_menu():
 	if load_autosave_btn:
 		load_autosave_btn.disabled = not FileAccess.file_exists("user://" + AUTOSAVE_FILE)
 	save_load_window.visible = false
+	reset_confirm_window.visible = false
 
 # --- UPGRADE SYSTEM (UPDATED) ---
 
