@@ -8,6 +8,11 @@ var cps: int = 0
 # Economy Settings
 var cost_growth: float = 1.5 
 
+# Prestige System (NEW)
+var prestige_currency: int = 0 # "Diamonds" or "Souls"
+var prestige_multiplier_per_point: float = 0.10 # 10% bonus per point
+const PRESTIGE_THRESHOLD = 1000000 # Score needed to see the button
+
 # Building Counts (NEW: Tracks how many of each you own)
 var building_counts = {
 	"cpc1": 0, "cpc2": 0, "cpc3": 0, "cpc4": 0, "cpc5": 0,
@@ -37,6 +42,7 @@ var pause_menu_node: Control
 var save_load_window: Control 
 var load_autosave_btn: Button 
 var synergy_container: VBoxContainer # Where we put upgrade buttons
+var prestige_label: Label # To show current permanent bonus
 
 # --- NODES & SIGNALS ---
 func _ready():
@@ -48,13 +54,16 @@ func _ready():
 	
 	screen_size = get_viewport_rect().size
 	
+	# Setup UI elements
 	setup_pause_menu()
+	create_prestige_ui()
+	
 	load_last_played_game()
 	
 	# Recalculate stats immediately to ensure UI is correct after load
 	recalculate_stats()
 	update_ui_text()
-	check_synergy_unlocks() # Check if we should show the upgrade
+	check_synergy_unlocks() 
 	
 	randomize()
 	
@@ -65,8 +74,9 @@ func _ready():
 func _process(_delta):
 	if not get_tree().paused:
 		$Score.text = "Moneys: %s" % score
-		# Check continuously if we can show the upgrade button
+		# Check continuously if we can show upgrades or prestige
 		check_synergy_unlocks()
+		check_prestige_unlock()
 
 func _input(event):
 	if event.is_action_pressed("ui_cancel"): 
@@ -119,38 +129,114 @@ func handle_combo_effects():
 	elif combo > 15 and not $ComboEffect2.emitting: $ComboEffect2.emitting = true
 	elif combo > 10 and not $ComboEffect.emitting: $ComboEffect.emitting = true
 
-# --- CORE CALCULATION ENGINE (NEW) ---
+# --- CORE CALCULATION ENGINE ---
 
 func recalculate_stats():
-	# 1. Calculate CPS (Passive)
+	# 1. Calculate Base CPS (Passive)
 	var cps1_prod = building_counts["cps1"] * 1
-	# SYNERGY: Manager Training doubles CPS1
-	if synergies["manager_training"]:
-		cps1_prod *= 2
+	if synergies["manager_training"]: cps1_prod *= 2
 		
 	var cps2_prod = building_counts["cps2"] * 5
 	var cps3_prod = building_counts["cps3"] * 20
 	var cps4_prod = building_counts["cps4"] * 125
 	var cps5_prod = building_counts["cps5"] * 500
 	
-	cps = cps1_prod + cps2_prod + cps3_prod + cps4_prod + cps5_prod
+	var base_cps = cps1_prod + cps2_prod + cps3_prod + cps4_prod + cps5_prod
 
-	# 2. Calculate CPC (Active)
-	# Base click is 1
+	# 2. Calculate Base CPC (Active)
 	var cpc1_prod = building_counts["cpc1"] * 1
 	var cpc2_prod = building_counts["cpc2"] * 5
 	var cpc3_prod = building_counts["cpc3"] * 20
 	var cpc4_prod = building_counts["cpc4"] * 125
 	var cpc5_prod = building_counts["cpc5"] * 500
 	
-	cpc = 1 + cpc1_prod + cpc2_prod + cpc3_prod + cpc4_prod + cpc5_prod
+	var base_cpc = 1 + cpc1_prod + cpc2_prod + cpc3_prod + cpc4_prod + cpc5_prod
+
+	# 3. APPLY PRESTIGE MULTIPLIER
+	# Example: 10 diamonds = 1.0 + (10 * 0.1) = 2.0x multiplier (Double)
+	var multiplier = 1.0 + (prestige_currency * prestige_multiplier_per_point)
+	
+	cps = round(base_cps * multiplier)
+	cpc = round(base_cpc * multiplier)
+	
+	# Update the prestige UI label
+	if prestige_label:
+		var percent = int(multiplier * 100) - 100
+		prestige_label.text = "Diamonds: %s\nBonus: +%s%%" % [prestige_currency, percent]
+
+# --- PRESTIGE SYSTEM ---
+
+func create_prestige_ui():
+	# Create a label for displaying diamonds on the main screen
+	prestige_label = Label.new()
+	prestige_label.position = Vector2(20, 20)
+	prestige_label.modulate = Color(0.6, 0.8, 1.0) # Light blue
+	prestige_label.text = "Diamonds: 0\nBonus: +0%"
+	add_child(prestige_label)
+
+func check_prestige_unlock():
+	var btn_name = "Prestige_Button"
+	var existing_btn = $VBoxContainer.get_node_or_null(btn_name)
+	
+	# Only show if score is high enough to gain at least 1 diamond
+	# Let's say 1 Diamond per 100,000 score
+	var potential_gain = floor(score / 100000.0)
+	
+	if score >= PRESTIGE_THRESHOLD and potential_gain > 0:
+		if not existing_btn:
+			var btn = Button.new()
+			btn.name = btn_name
+			btn.modulate = Color(0.4, 1.0, 1.0) # Cyan
+			btn.text = "ASCEND\nReset to gain +%s Diamonds" % potential_gain
+			btn.pressed.connect(func(): perform_prestige_reset(potential_gain))
+			# Add to TOP of list
+			$VBoxContainer.add_child(btn)
+			$VBoxContainer.move_child(btn, 0)
+		else:
+			# Update the text dynamically as score goes up
+			existing_btn.text = "ASCEND\nReset to gain +%s Diamonds" % potential_gain
+	else:
+		if existing_btn:
+			existing_btn.queue_free()
+
+func perform_prestige_reset(gain: int):
+	# 1. Add Currency
+	prestige_currency += gain
+	
+	# 2. Reset Game State
+	score = 0
+	combo = 0
+	
+	# Reset buildings
+	for k in building_counts.keys():
+		building_counts[k] = 0
+	
+	# Reset synergies
+	for k in synergies.keys():
+		synergies[k] = false
+	
+	# Reset costs to defaults
+	cost_cpc1 = 20; cost_cpc2 = 150; cost_cpc3 = 1400; cost_cpc4 = 12000; cost_cpc5 = 200000
+	cost_cps1 = 20; cost_cps2 = 150; cost_cps3 = 1400; cost_cps4 = 12000; cost_cps5 = 200000
+	
+	# Remove any upgrade buttons that might be lingering
+	for child in $VBoxContainer.get_children():
+		if child.name.begins_with("Synergy_") or child.name == "Prestige_Button":
+			child.queue_free()
+
+	# 3. Recalculate & Save
+	recalculate_stats()
+	update_ui_text()
+	save_game(current_save_file_name if current_save_file_name != "" else AUTOSAVE_FILE)
+	
+	spawn_floating_text("ASCENDED!", screen_size / 2, Color.CYAN)
+	spawn_floating_text("+%s Diamonds" % gain, (screen_size / 2) + Vector2(0, 40), Color.CYAN)
 
 # --- SYNERGY SYSTEM ---
 
 func check_synergy_unlocks():
 	# If we haven't bought Manager Training yet
 	if not synergies["manager_training"]:
-		# Check if the button already exists in the scene
 		var btn_name = "Synergy_ManagerTraining"
 		var existing_btn = $VBoxContainer.get_node_or_null(btn_name)
 		
@@ -168,7 +254,6 @@ func create_synergy_button(name_id: String, text: String, cost: int, tooltip: St
 	btn.name = name_id
 	btn.text = text
 	btn.tooltip_text = tooltip
-	# Make it look distinct (e.g., Purple)
 	btn.modulate = Color(0.8, 0.5, 1.0)
 	
 	btn.pressed.connect(func():
@@ -177,13 +262,8 @@ func create_synergy_button(name_id: String, text: String, cost: int, tooltip: St
 			callback.call()
 			btn.queue_free() # Remove button after buying
 			spawn_floating_text("UPGRADE BOUGHT!", $Score.global_position, Color.MAGENTA)
-			# Save game to remember the upgrade
 			if current_save_file_name != "": save_game(current_save_file_name)
 	)
-	
-	# Add to the main list. 
-	# We use move_child to put it at the top or bottom if we wanted, 
-	# but appending to VBoxContainer is fine.
 	$VBoxContainer.add_child(btn)
 
 # --- SAVE / LOAD SYSTEM ---
@@ -213,8 +293,9 @@ func save_game(filename: String, is_manual_save: bool = true):
 	
 	var save_data = {
 		"score": score,
-		"counts": building_counts, # Save the new counts
-		"synergies": synergies,    # Save upgrades
+		"counts": building_counts, 
+		"synergies": synergies, 
+		"prestige": prestige_currency, # Save Diamonds
 		"timestamp": time_str,
 		"costs": {
 			"cpc1": cost_cpc1, "cpc2": cost_cpc2, "cpc3": cost_cpc3, "cpc4": cost_cpc4, "cpc5": cost_cpc5,
@@ -240,6 +321,7 @@ func load_game(filename: String):
 	
 	if data:
 		score = int(data.get("score", score))
+		prestige_currency = int(data.get("prestige", 0)) # Load Diamonds
 		
 		# Load Synergies
 		var loaded_synergies = data.get("synergies", {})
@@ -261,8 +343,6 @@ func load_game(filename: String):
 		cost_cps5 = int(costs.get("cps5", cost_cps5))
 		
 		# --- MIGRATION LOGIC ---
-		# If the save file has counts, load them.
-		# If not (Old Save), calculate them from costs!
 		if data.has("counts"):
 			var c = data["counts"]
 			for k in building_counts.keys():
@@ -292,11 +372,8 @@ func load_game(filename: String):
 			var meta = FileAccess.open(META_PATH, FileAccess.WRITE)
 			meta.store_string(JSON.stringify({"last_played": filename}))
 
-# Helper to reverse math: cost = base * (growth ^ count)
-# so count = log(cost/base) / log(growth)
 func get_count_from_cost(current: float, base: float) -> int:
 	if current <= base: return 0
-	# Logarithm change of base rule: log_b(x) = ln(x) / ln(b)
 	var count = log(current / base) / log(cost_growth)
 	return round(count)
 
@@ -465,19 +542,15 @@ func toggle_pause_menu():
 func attempt_purchase(button_node: Button, current_cost: int, id_name: String, is_cps: bool) -> int:
 	if score >= current_cost:
 		score -= current_cost
-		
-		# NEW: Update the specific count
 		if building_counts.has(id_name):
 			building_counts[id_name] += 1
-		
-		# NEW: Recalculate global stats based on all counts
 		recalculate_stats()
 		
 		var new_cost = round(current_cost * cost_growth)
-		
-		# Update Label Text
-		# We need to look up power gain based on ID to keep text correct
 		var power_gain = 0
+		var building_name = get_building_name(id_name)
+		
+		# Define Power Gains
 		if id_name == "cpc1" or id_name == "cps1": power_gain = 1
 		elif id_name == "cpc2" or id_name == "cps2": power_gain = 5
 		elif id_name == "cpc3" or id_name == "cps3": power_gain = 20
@@ -485,7 +558,7 @@ func attempt_purchase(button_node: Button, current_cost: int, id_name: String, i
 		elif id_name == "cpc5" or id_name == "cps5": power_gain = 500
 		
 		var type_str = "CPS" if is_cps else "CPC"
-		button_node.text = "+%s %s [%s]" % [power_gain, type_str, new_cost]
+		button_node.text = "%s: +%s %s [%s]" % [building_name, power_gain, type_str, new_cost]
 		
 		update_ui_text()
 		save_game(AUTOSAVE_FILE, false)
@@ -493,19 +566,36 @@ func attempt_purchase(button_node: Button, current_cost: int, id_name: String, i
 	else:
 		return current_cost 
 
+func get_building_name(id: String) -> String:
+	match id:
+		"cps1": return "Wutux Slave"
+		"cps2": return "Wutux Miner"
+		"cps3": return "Wutux Tribe"
+		"cps4": return "Wutux City"
+		"cps5": return "Wutux Planet"
+		"cpc1": return "Click Upgrade 1"
+		"cpc2": return "Click Upgrade 2"
+		"cpc3": return "Click Upgrade 3"
+		"cpc4": return "Click Upgrade 4"
+		"cpc5": return "Click Upgrade 5"
+	return "Upgrade"
+
 func update_ui_text():
 	$Label2.text = "Total Wutux Production: %s CPS" % cps
 	$Label3.text = "Click Strength: %s CPC" % cpc
-	$VBoxContainer/CPC1.text = "+1 CPC [%s]" % cost_cpc1
-	$VBoxContainer/CPC2.text = "+5 CPC [%s]" % cost_cpc2
-	$VBoxContainer/CPC3.text = "+20 CPC [%s]" % cost_cpc3
-	$VBoxContainer/CPC4.text = "+125 CPC [%s]" % cost_cpc4
-	$VBoxContainer/CPC5.text = "+500 CPC [%s]" % cost_cpc5
-	$VBoxContainer/CPS1.text = "+1 CPS [%s]" % cost_cps1
-	$VBoxContainer/CPS2.text = "+5 CPS [%s]" % cost_cps2
-	$VBoxContainer/CPS3.text = "+20 CPS [%s]" % cost_cps3
-	$VBoxContainer/CPS4.text = "+125 CPS [%s]" % cost_cps4
-	$VBoxContainer/CPS5.text = "+500 CPS [%s]" % cost_cps5
+	
+	# Use new helper to keep names consistent
+	$VBoxContainer/CPC1.text = "%s: +1 CPC [%s]" % [get_building_name("cpc1"), cost_cpc1]
+	$VBoxContainer/CPC2.text = "%s: +5 CPC [%s]" % [get_building_name("cpc2"), cost_cpc2]
+	$VBoxContainer/CPC3.text = "%s: +20 CPC [%s]" % [get_building_name("cpc3"), cost_cpc3]
+	$VBoxContainer/CPC4.text = "%s: +125 CPC [%s]" % [get_building_name("cpc4"), cost_cpc4]
+	$VBoxContainer/CPC5.text = "%s: +500 CPC [%s]" % [get_building_name("cpc5"), cost_cpc5]
+	
+	$VBoxContainer/CPS1.text = "%s: +1 CPS [%s]" % [get_building_name("cps1"), cost_cps1]
+	$VBoxContainer/CPS2.text = "%s: +5 CPS [%s]" % [get_building_name("cps2"), cost_cps2]
+	$VBoxContainer/CPS3.text = "%s: +20 CPS [%s]" % [get_building_name("cps3"), cost_cps3]
+	$VBoxContainer/CPS4.text = "%s: +125 CPS [%s]" % [get_building_name("cps4"), cost_cps4]
+	$VBoxContainer/CPS5.text = "%s: +500 CPS [%s]" % [get_building_name("cps5"), cost_cps5]
 
 # --- SPECIAL BUTTON ---
 func spawn_special_button():
