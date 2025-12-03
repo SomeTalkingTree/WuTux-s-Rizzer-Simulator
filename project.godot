@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Clicker Game"
-run/main_scene="uid://cxndyuqsmhvkt"
+run/main_scene="uid://d4l76jghdlhls"
 config/features=PackedStringArray("4.5")
 config/icon="res://icon.png"
 
