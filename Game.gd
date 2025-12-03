@@ -1,7 +1,7 @@
 extends Control
 
 # --- CONFIGURATION & VARIABLES ---
-var score: int = 1213109879879844541 
+var score: int = 0 
 var cpc: int = 1 
 var cps: int = 0 
 
