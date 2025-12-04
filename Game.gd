@@ -75,6 +75,7 @@ func _ready():
 func _process(_delta):
 	if not get_tree().paused:
 		$Score.text = "Moneys: %s" % score
+		$ColorRect.size = ($Score.size)
 		# Check continuously if we can show upgrades or prestige
 		check_synergy_unlocks()
 		check_prestige_unlock()
