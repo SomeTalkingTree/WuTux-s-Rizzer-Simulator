@@ -169,7 +169,7 @@ func recalculate_stats():
 func create_prestige_ui():
 	# Create a label for displaying diamonds on the main screen
 	prestige_label = Label.new()
-	prestige_label.position = Vector2(20, 20)
+	prestige_label.position = Vector2(12, 94)
 	prestige_label.modulate = Color(0.6, 0.8, 1.0) # Light blue
 	prestige_label.text = "Diamonds: 0\nBonus: +0%"
 	add_child(prestige_label)
@@ -222,7 +222,7 @@ func perform_prestige_reset(gain: int):
 	save_game(current_save_file_name if current_save_file_name != "" else AUTOSAVE_FILE)
 	
 	spawn_floating_text("ASCENDED!", screen_size / 2, Color.CYAN)
-	spawn_floating_text("+%s Diamonds" % gain, (screen_size / 2) + Vector2(0, 40), Color.CYAN)
+	spawn_floating_text("+%s Diamonds" % gain, (screen_size / 2) + Vector2(0, 126), Color.CYAN)
 
 # --- SYNERGY SYSTEM ---
 
